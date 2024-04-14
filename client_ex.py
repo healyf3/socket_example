@@ -34,7 +34,7 @@ def service_connection(key, mask):
         recv_data = sock.recv(1024)  # Should be ready to read
         if recv_data:
             data.outb += recv_data
-            print(f"Received {recv_data!r} from connection {data.connid}")
+            #print(f"Received {recv_data!r} from connection {data.connid}")
             data.recv_total += len(recv_data)
         else:
             print(f"Closing connection {data.connid}")
