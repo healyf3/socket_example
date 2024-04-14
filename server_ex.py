@@ -1,29 +1,49 @@
-import threading
+import sys
 import socket
-import time
-from queue import Queue
+import selectors
+import types
 
-NUMBER_OF_THREADS = 2
-JOB_NUMBER = [1, 2]
-queue = Queue()
-all_connections = []
-all_address = []
+sel = selectors.DefaultSelector()
 
 HOST = "127.0.0.1"  # Standard loopback interface address (localhost)
 PORT = 65432  # Port to listen on (non-privileged ports are > 1023)
+msg = b"This is the server"
 
-msg = "this is the server"
-s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-s.bind((HOST, PORT))
-s.listen()
-conn, addr = s.accept()
+host, port = HOST, PORT
+lsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+lsock.bind((host, port))
+lsock.listen()
+print(f"Listening on {(host, port)}")
+lsock.setblocking(False)
+sel.register(lsock, selectors.EVENT_READ, data=None)
 
-def callback():
-    conn.sendall(msg.encode())
+def accept_wrapper(sock):
+    conn, addr = sock.accept()  # Should be ready to read
+    print(f"Accepted connection from {addr}")
+    conn.setblocking(False)
+    data = types.SimpleNamespace(addr=addr, inb=b"", outb=b"")
+    events = selectors.EVENT_WRITE
+    sel.register(conn, events, data=data)
 
-while(1):
-    callback()
+def service_connection(key, mask):
+    sock = key.fileobj
+    data = key.data
+    if mask & selectors.EVENT_WRITE:
+        data.outb = msg
+        if data.outb:
+            #print(f"Echoing {data.outb!r} to {data.addr}")
+            sent = sock.send(data.outb)  # Should be ready to write
+            data.outb = data.outb[sent:]
 
-# Create connection creation and sending threads
-def create_threads():
-    for _ in 2
+try:
+    while True:
+        events = sel.select(timeout=None)
+        for key, mask in events:
+            if key.data is None:
+                accept_wrapper(key.fileobj)
+            else:
+                service_connection(key, mask)
+except KeyboardInterrupt:
+    print("Caught keyboard interrupt, exiting")
+finally:
+    sel.close()

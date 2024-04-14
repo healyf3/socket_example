@@ -12,7 +12,7 @@ messages = [b"Message 1 from client.", b"Message 2 from client."]
 
 def start_connections(host, port):
     server_addr = (host, port)
-    connid = 1
+    connid = 2
     print(f"Starting connection {connid} to {server_addr}")
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.setblocking(False)
